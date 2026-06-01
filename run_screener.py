@@ -97,6 +97,12 @@ def main() -> int:
         universe, financial_data, suspended
     )
     survived_filters = len(filtered_universe)
+    if survived_filters == 0:
+        logger.error(
+            "No stocks survived filters. "
+            "Check fiscal_year (%d) — data may not yet exist for that year.", fiscal_year
+        )
+        return 1
 
     # Step 8: Compute value scores
     value_scores = compute_value_scores(filtered_universe, financial_data, market_df)

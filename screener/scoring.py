@@ -61,6 +61,11 @@ def compute_value_scores(
 
         records.append({"ticker": ticker, "pbr": pbr, "per": per, "psr": psr, "pcr": pcr})
 
+    if not records:
+        return pd.DataFrame(columns=["pbr", "per", "psr", "pcr",
+                                     "pbr_rank_pct", "per_rank_pct",
+                                     "psr_rank_pct", "pcr_rank_pct",
+                                     "composite_score"])
     df = pd.DataFrame(records).set_index("ticker")
 
     df["pbr_rank_pct"] = _percentile_rank(df["pbr"]) * 100
