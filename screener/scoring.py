@@ -85,7 +85,13 @@ def apply_quality_overlay(
     for ticker in tickers:
         fin = financial_data.get(ticker, {})
         mrow = market_df.loc[ticker] if ticker in market_df.index else pd.Series(dtype=float)
-        shares = int(float(mrow.get("shares") or 0)) or None
+        shares_raw = mrow.get("shares")
+        try:
+            shares = int(float(shares_raw)) if shares_raw is not None and shares_raw == shares_raw else None
+            if shares == 0:
+                shares = None
+        except (ValueError, TypeError):
+            shares = None
 
         roe = fin.get("roe")
         debt_ratio = fin.get("debt_ratio")
