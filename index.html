@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>한국 가치투자 스크리너</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <h1>🇰🇷 한국 <span>가치투자</span> 스크리너</h1>
+    <div id="meta-bar">데이터 로딩 중...</div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div id="warning-banner"></div>
+
+  <div id="error-state">
+    <h2>데이터를 불러올 수 없습니다</h2>
+    <p></p>
+  </div>
+
+  <div id="empty-state">
+    <h2>아직 데이터가 없습니다</h2>
+    <p>첫 번째 스크리너 실행 후 결과가 표시됩니다.<br>
+       GitHub Actions → "Run Stock Screener" → Run workflow 를 실행해주세요.</p>
+  </div>
+
+  <div id="main-content">
+
+    <div id="summary-cards"></div>
+
+    <div class="section-title">선정 종목</div>
+    <div class="table-wrapper">
+      <table id="results">
+        <thead><tr></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+
+    <div class="section-title" id="changelog-title" style="margin-top:32px">변경사항 (전회 대비)</div>
+    <div id="changelog">
+      <div class="changelog-row" id="cl-entered"></div>
+      <div class="changelog-row" id="cl-exited"></div>
+    </div>
+
+    <div class="section-title" style="margin-top:32px">스크리닝 방법론</div>
+    <details id="methodology">
+      <summary>스크리닝 로직 보기</summary>
+      <div class="method-grid">
+        <div>
+          <h4>1단계 — 유니버스</h4>
+          <ul>
+            <li>KOSPI 시가총액 상위 250종목</li>
+            <li>12월 결산 기업만 포함</li>
+          </ul>
+        </div>
+        <div>
+          <h4>2단계 — 제외 필터</h4>
+          <ul>
+            <li>관리종목·거래정지 제외</li>
+            <li>금융주·지주회사 제외</li>
+            <li>자본잠식·당기순손실 제외</li>
+          </ul>
+        </div>
+        <div>
+          <h4>3단계 — 4팩터 밸류 콤보</h4>
+          <ul>
+            <li>PBR (자산 대비 저평가)</li>
+            <li>PER (이익 대비 저평가)</li>
+            <li>PSR (매출 대비 저평가)</li>
+            <li>PCR (영업현금흐름 대비)</li>
+            <li>종합점수 = 4지표 백분위 평균</li>
+          </ul>
+        </div>
+        <div>
+          <h4>4단계 — 퀄리티 오버레이</h4>
+          <ul>
+            <li>ROE &gt; 8%</li>
+            <li>부채비율 &lt; 150%</li>
+            <li>유동비율 &gt; 100%</li>
+            <li>영업이익 2년 연속 흑자</li>
+            <li>Piotroski F-Score ≥ 6</li>
+          </ul>
+        </div>
+        <div>
+          <h4>5단계 — 최종 선정</h4>
+          <ul>
+            <li>퀄리티 통과 종목 중</li>
+            <li>종합점수 상위 20종목</li>
+            <li>동일가중 편입 (각 5%)</li>
+          </ul>
+        </div>
+        <div>
+          <h4>리밸런싱</h4>
+          <ul>
+            <li>연 1회 (4월, 사업보고서 확정 후)</li>
+            <li>DART · pykrx 데이터 기준</li>
+          </ul>
+        </div>
+      </div>
+    </details>
+
+  </div><!-- /main-content -->
+
+</div><!-- /container -->
+
+<footer>
+  <div class="container">
+    <p>데이터 출처: DART OpenAPI · pykrx · KRX &nbsp;|&nbsp; 본 자료는 투자 참고용이며 투자 권유가 아닙니다. 투자 결과에 대한 책임은 투자자 본인에게 있습니다.</p>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
