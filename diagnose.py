@@ -100,13 +100,25 @@ def test_yfinance():
         return False
 
     try:
-        t = yf.Ticker("005380.KS")
-        info = t.info
-        price = info.get("currentPrice") or info.get("regularMarketPrice")
-        check("yfinance Samsung fetch", bool(price), f"price={price}")
-        return bool(price)
+        # Test batch download (primary method)
+        df = yf.download("005380.KS", period="5d", auto_adjust=True,
+                         progress=False, threads=False)
+        ok = not df.empty
+        price = float(df["Close"].dropna().iloc[-1]) if ok else None
+        check("yfinance batch download (Samsung)", ok, f"price={price}")
+        if ok:
+            return True
     except Exception as e:
-        check("yfinance connectivity", False, str(e))
+        check("yfinance batch download", False, str(e))
+
+    try:
+        import yfinance as yf
+        fi = yf.Ticker("005380.KS").fast_info
+        mc = getattr(fi, "market_cap", None)
+        check("yfinance fast_info (Samsung)", bool(mc), f"market_cap={mc}")
+        return bool(mc)
+    except Exception as e:
+        check("yfinance fast_info", False, str(e))
         return False
 
 
