@@ -18,6 +18,11 @@ on:
         description: 'Test mode - limit universe to top N stocks (e.g. 20). Leave blank for full run.'
         required: false
         default: ''
+      clear_cache:
+        description: 'Clear DART response cache before running (use after DART amends filings)'
+        required: false
+        default: 'false'
+        type: boolean
 
 permissions:
   contents: write
@@ -53,6 +58,10 @@ jobs:
           key: dart-cache-${{ github.run_id }}
           restore-keys: |
             dart-cache-
+
+      - name: Clear DART cache if requested
+        if: ${{ github.event.inputs.clear_cache == 'true' }}
+        run: rm -rf .dart_cache && echo "DART cache cleared"
 
       - name: Install dependencies
         run: pip install -r requirements.txt
