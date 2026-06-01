@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "generated_at": null,
+    "data_as_of": null,
+    "fiscal_year": null,
+    "universe_size": 0,
+    "survived_filters": 0,
+    "quality_passed": 0,
+    "selected_count": 0,
+    "screener_version": "1.0.0",
+    "next_rebalance": null,
+    "warnings": []
+  },
+  "stocks": [],
+  "excluded": {
+    "suspended": [],
+    "sector_excluded": [],
+    "non_december_fiscal": [],
+    "capital_impaired": [],
+    "net_loss": [],
+    "data_unavailable": []
+  },
+  "changelog": {
+    "entered": [],
+    "exited": []
+  }
+}
