@@ -55,15 +55,37 @@ def load_corp_code_map() -> dict[str, str]:
 
     api_key = _get_api_key()
     logger.info("Downloading DART corpCode.xml...")
-    resp = requests.get(
-        f"{DART_BASE_URL}/corpCode.xml",
-        params={"crtfc_key": api_key},
-        timeout=60,
-    )
-    resp.raise_for_status()
+    try:
+        resp = requests.get(
+            f"{DART_BASE_URL}/corpCode.xml",
+            params={"crtfc_key": api_key},
+            timeout=60,
+        )
+        resp.raise_for_status()
+    except requests.RequestException as e:
+        raise DartApiError(f"Failed to download corpCode.xml: {e}") from e
 
-    with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
-        xml_bytes = zf.read("CORPCODE.xml")
+    # DART returns JSON (with error status) if API key is invalid
+    content_type = resp.headers.get("Content-Type", "")
+    if "json" in content_type or resp.content[:1] == b"{":
+        try:
+            body = resp.json()
+            raise DartApiError(
+                f"DART API key rejected: status={body.get('status')} "
+                f"message={body.get('message')} "
+                f"(Check that DART_API_KEY secret is correct)"
+            )
+        except (ValueError, KeyError):
+            raise DartApiError(f"Unexpected DART response (not zip): {resp.content[:100]}")
+
+    try:
+        with zipfile.ZipFile(io.BytesIO(resp.content)) as zf:
+            xml_bytes = zf.read("CORPCODE.xml")
+    except zipfile.BadZipFile as e:
+        raise DartApiError(
+            f"corpCode.xml response is not a valid zip file. "
+            f"Content starts with: {resp.content[:80]!r}"
+        ) from e
 
     root = ET.fromstring(xml_bytes)
     result: dict[str, str] = {}

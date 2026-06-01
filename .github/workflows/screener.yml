@@ -45,15 +45,10 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Verify DART API key is set
+      - name: Run diagnostics (verify DART key + data source connectivity)
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
-        run: |
-          if [ -z "$DART_API_KEY" ]; then
-            echo "::error::DART_API_KEY secret is not set. Go to Settings → Secrets and variables → Actions → New repository secret, Name: DART_API_KEY"
-            exit 1
-          fi
-          echo "DART_API_KEY is set (length: ${#DART_API_KEY} chars)"
+        run: python diagnose.py
 
       - name: Run screener
         env:
