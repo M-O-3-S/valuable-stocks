@@ -114,11 +114,48 @@ def fetch_financials(tickers: list[str], year: int) -> dict[str, dict]:
     return results
 
 
+_fiscal_month_cache: dict[str, int | None] = {}
+
+
+def get_fiscal_months_bulk() -> dict[str, int | None]:
+    """
+    Fetch fiscal months for ALL KOSPI companies in bulk via DART corpSrch.json.
+    ~10 API calls instead of 600+. Returns {stock_code: fiscal_month}.
+    Result is cached in-process.
+    """
+    global _fiscal_month_cache
+    if _fiscal_month_cache:
+        return _fiscal_month_cache
+
+    logger.info("Loading KOSPI fiscal months in bulk from DART...")
+    try:
+        corps = dart_client.get_all_corps_bulk(corp_cls="Y")
+        result: dict[str, int | None] = {}
+        for c in corps:
+            stock_code = (c.get("stock_code") or "").strip()
+            acc_mt_raw = (c.get("acc_mt") or "").strip()
+            if stock_code:
+                try:
+                    result[stock_code] = int(acc_mt_raw) if acc_mt_raw.isdigit() else None
+                except ValueError:
+                    result[stock_code] = None
+        _fiscal_month_cache = result
+        logger.info("Fiscal months loaded: %d KOSPI companies", len(result))
+        return result
+    except Exception as e:
+        logger.warning("Bulk fiscal month load failed (%s); falling back to per-ticker", e)
+        return {}
+
+
 def get_fiscal_months(tickers: list[str]) -> dict[str, int | None]:
-    """Return dict: ticker → fiscal month (int 1-12) or None if unknown."""
+    """Return dict: ticker → fiscal month. Uses bulk load, per-ticker fallback."""
+    bulk = get_fiscal_months_bulk()
+    if bulk:
+        return {t: bulk.get(t) for t in tickers}
+
+    # Fallback: individual DART calls (slow)
     corp_map = dart_client.load_corp_code_map()
     result: dict[str, int | None] = {}
-
     for ticker in tickers:
         corp_code = corp_map.get(ticker)
         if not corp_code:
@@ -127,10 +164,8 @@ def get_fiscal_months(tickers: list[str]) -> dict[str, int | None]:
         try:
             info = dart_client.get_company_info(corp_code)
             acc_mt_raw = info.get("acc_mt", "")
-            acc_mt = int(acc_mt_raw) if acc_mt_raw.strip().isdigit() else None
-            result[ticker] = acc_mt
+            result[ticker] = int(acc_mt_raw) if acc_mt_raw.strip().isdigit() else None
         except Exception as e:
             logger.debug("Could not get fiscal month for %s: %s", ticker, e)
             result[ticker] = None
-
     return result

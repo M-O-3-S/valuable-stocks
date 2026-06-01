@@ -21,7 +21,7 @@ permissions:
 jobs:
   screen:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout repository
@@ -45,6 +45,11 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Run diagnostics (verify DART key + data source connectivity)
+        env:
+          DART_API_KEY: ${{ secrets.DART_API_KEY }}
+        run: python diagnose.py
+
       - name: Run screener
         env:
           DART_API_KEY: ${{ secrets.DART_API_KEY }}
@@ -65,4 +70,24 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/data/latest.json
           git diff --staged --quiet || git commit -m "chore: update screener results $(date -u +%Y-%m-%d)"
-          git push
+          git push origin main
+
+      - name: Deploy docs/ to gh-pages branch
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          cp -r docs /tmp/gh-pages-content
+
+          git fetch origin gh-pages 2>/dev/null || true
+          git checkout gh-pages 2>/dev/null || git checkout --orphan gh-pages
+
+          git rm -rf . --quiet 2>/dev/null || true
+          cp -r /tmp/gh-pages-content/. .
+
+          git add -A
+          git diff --staged --quiet || git commit -m "deploy: update GitHub Pages $(date -u +%Y-%m-%d)"
+          git push origin gh-pages
+
+          git checkout main

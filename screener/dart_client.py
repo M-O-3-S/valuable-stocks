@@ -92,6 +92,42 @@ def get_company_info(corp_code: str) -> dict:
     return data
 
 
+def get_all_corps_bulk(corp_cls: str = "Y", page_count: int = 100) -> list[dict]:
+    """
+    Fetch ALL companies of a given class in bulk via /corpSrch.json.
+    corp_cls: Y=KOSPI, K=KOSDAQ, N=KONEX, E=ETC
+    Returns list of dicts with keys: corp_code, corp_name, stock_code, acc_mt, corp_cls
+    Much faster than calling get_company_info() per ticker.
+    """
+    api_key = _get_api_key()
+    all_corps: list[dict] = []
+    page_no = 1
+
+    while True:
+        data = _request(
+            f"{DART_BASE_URL}/corpSrch.json",
+            {
+                "crtfc_key": api_key,
+                "corp_cls": corp_cls,
+                "page_no": page_no,
+                "page_count": page_count,
+            },
+        )
+        items = data.get("list", [])
+        all_corps.extend(items)
+
+        total_page = int(data.get("total_page", 1))
+        logger.debug("corpSrch page %d/%d, got %d items", page_no, total_page, len(items))
+
+        if page_no >= total_page or not items:
+            break
+        page_no += 1
+        time.sleep(0.3)  # light rate limiting between pages
+
+    logger.info("corpSrch bulk: %d %s companies loaded", len(all_corps), corp_cls)
+    return all_corps
+
+
 def get_single_acnt(
     corp_code: str,
     year: int,
