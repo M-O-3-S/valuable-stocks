@@ -14,6 +14,10 @@ on:
         required: false
         default: 'false'
         type: boolean
+      test_mode:
+        description: 'Test mode - limit universe to top N stocks (e.g. 20). Leave blank for full run.'
+        required: false
+        default: ''
 
 permissions:
   contents: write
@@ -42,6 +46,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
+      - name: Cache DART API responses
+        uses: actions/cache@v4
+        with:
+          path: .dart_cache
+          key: dart-cache-${{ github.run_id }}
+          restore-keys: |
+            dart-cache-
+
       - name: Install dependencies
         run: pip install -r requirements.txt
 
@@ -60,6 +72,9 @@ jobs:
           fi
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
             ARGS="$ARGS --dry-run"
+          fi
+          if [ -n "${{ github.event.inputs.test_mode }}" ]; then
+            ARGS="$ARGS --test-mode ${{ github.event.inputs.test_mode }}"
           fi
           python run_screener.py $ARGS
 

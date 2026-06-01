@@ -1,4 +1,5 @@
 import io
+import json
 import logging
 import os
 import time
@@ -13,6 +14,8 @@ logger = logging.getLogger(__name__)
 
 _corp_code_map: dict[str, str] = {}
 
+_CACHE_DIR = os.environ.get("DART_CACHE_DIR", ".dart_cache")
+
 
 class DartApiError(Exception):
     pass
@@ -23,6 +26,25 @@ def _get_api_key() -> str:
     if not key:
         raise DartApiError("DART_API_KEY environment variable is not set")
     return key
+
+
+def _cache_get(corp_code: str, year: int, report_type: str, fs_div: str) -> list[dict] | None:
+    path = os.path.join(_CACHE_DIR, f"{corp_code}_{year}_{report_type}_{fs_div}.json")
+    try:
+        with open(path) as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+def _cache_set(corp_code: str, year: int, report_type: str, fs_div: str, data: list[dict]) -> None:
+    os.makedirs(_CACHE_DIR, exist_ok=True)
+    path = os.path.join(_CACHE_DIR, f"{corp_code}_{year}_{report_type}_{fs_div}.json")
+    try:
+        with open(path, "w") as f:
+            json.dump(data, f)
+    except OSError:
+        pass
 
 
 def _request(url: str, params: dict, retries: int = 3) -> dict:
@@ -161,6 +183,11 @@ def get_single_acnt(
     report_type: 11011=annual, 11012=Q1, 11013=H1, 11014=Q3
     fs_div: CFS=consolidated, OFS=standalone
     """
+    cached = _cache_get(corp_code, year, report_type, fs_div)
+    if cached is not None:
+        logger.debug("DART cache hit: %s %d %s %s", corp_code, year, report_type, fs_div)
+        return cached
+
     api_key = _get_api_key()
     time.sleep(0.7)
     try:
@@ -174,7 +201,9 @@ def get_single_acnt(
                 "fs_div": fs_div,
             },
         )
-        return data.get("list", [])
+        rows = data.get("list", [])
+        _cache_set(corp_code, year, report_type, fs_div, rows)
+        return rows
     except DartApiError as e:
         if fs_div == "CFS":
             logger.debug("CFS not available for %s, trying OFS: %s", corp_code, e)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Korean Value Investment Stock Screener
-Usage: python run_screener.py [--year YYYY] [--dry-run]
+Usage: python run_screener.py [--year YYYY] [--dry-run] [--test-mode [N]]
 """
 
 import argparse
@@ -29,10 +29,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Korean value stock screener")
     parser.add_argument("--year", type=int, default=None)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument(
+        "--test-mode", nargs="?", const=20, type=int, metavar="N",
+        help="Limit universe to top N stocks for fast pipeline testing (default: 20)",
+    )
     args = parser.parse_args()
 
     fiscal_year = args.year if args.year else get_target_fiscal_year()
-    logger.info("Fiscal year: %d | dry-run: %s", fiscal_year, args.dry_run)
+    test_limit: int | None = args.test_mode
+    logger.info(
+        "Fiscal year: %d | dry-run: %s | test-mode: %s",
+        fiscal_year, args.dry_run, f"top-{test_limit}" if test_limit else "off",
+    )
 
     # Step 1: Load DART corp code map (validates API key + downloads corpCode.xml)
     logger.info("Loading DART corp code map...")
@@ -62,14 +70,18 @@ def main() -> int:
         return 1
 
     # Step 4: Fetch fiscal months from DART for top candidates
-    top_candidates = market_df.head(600).index.tolist()
+    candidate_limit = test_limit * 3 if test_limit else 600
+    top_candidates = market_df.head(candidate_limit).index.tolist()
     logger.info("Fetching fiscal months for %d candidates...", len(top_candidates))
     fiscal_months = fd.get_fiscal_months(top_candidates)
 
     # Step 5: Build universe (fiscal + sector filter)
     universe = build_universe(market_df, fiscal_months)
+    if test_limit:
+        universe = universe.head(test_limit)
+        logger.info("test-mode: universe capped at %d stocks", test_limit)
     universe_size = len(universe)
-    if universe_size < 50:
+    if universe_size < 50 and not test_limit:
         logger.warning("Universe very small (%d). Data may be incomplete.", universe_size)
 
     # Step 6: Fetch DART financial data
