@@ -64,30 +64,22 @@ def test_dart_api_key():
         return False
 
 
-def test_pykrx():
+def test_fdr():
     try:
-        from pykrx import stock
-        check("pykrx import", True)
+        import FinanceDataReader as fdr
+        check("FinanceDataReader import", True)
     except ImportError as e:
-        check("pykrx import", False, str(e))
+        check("FinanceDataReader import", False, str(e))
         return False
 
     try:
-        from datetime import date, timedelta
-        # Try a recent trading day
-        for i in range(7):
-            d = (date.today() - timedelta(days=i)).strftime("%Y%m%d")
-            try:
-                df = stock.get_market_cap_by_ticker(d, market="KOSPI")
-                if not df.empty:
-                    check("pykrx KRX connectivity", True, f"date={d} rows={len(df)}")
-                    return True
-            except Exception:
-                continue
-        check("pykrx KRX connectivity", False, "empty data for all recent dates")
-        return False
+        df = fdr.StockListing("KOSPI")
+        ok = df is not None and not df.empty
+        check("FDR KOSPI listing", ok,
+              f"rows={len(df)} cols={df.columns.tolist()}" if ok else "empty")
+        return ok
     except Exception as e:
-        check("pykrx KRX connectivity", False, str(e))
+        check("FDR KOSPI listing", False, str(e))
         return False
 
 
@@ -132,21 +124,23 @@ def main():
     print("\n[1] DART API")
     results["dart"] = test_dart_api_key()
 
-    print("\n[2] pykrx (KRX market data)")
-    results["pykrx"] = test_pykrx()
+    print("\n[2] FinanceDataReader (KRX native — primary source)")
+    results["fdr"] = test_fdr()
 
-    print("\n[3] yfinance (Yahoo Finance fallback)")
+    print("\n[3] yfinance (Yahoo Finance — fallback source)")
     results["yfinance"] = test_yfinance()
 
     print("\n" + "=" * 50)
     if not results["dart"]:
         print("CRITICAL: DART API is not working. Check DART_API_KEY secret.")
         sys.exit(1)
-    if not results["pykrx"] and not results["yfinance"]:
-        print("CRITICAL: Neither pykrx nor yfinance can fetch market data.")
+    if not results["fdr"] and not results["yfinance"]:
+        print("CRITICAL: Neither FinanceDataReader nor yfinance can fetch market data.")
         sys.exit(1)
-    if not results["pykrx"]:
-        print("WARNING: pykrx unavailable. Will use yfinance for market data.")
+    if results["fdr"]:
+        print("Market data source: FinanceDataReader (KRX native) ✓")
+    else:
+        print("Market data source: yfinance (fallback) — FDR unavailable")
     print("Diagnostics passed. Proceeding with screener.")
     sys.exit(0)
 
