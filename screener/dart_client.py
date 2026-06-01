@@ -15,6 +15,13 @@ logger = logging.getLogger(__name__)
 _corp_code_map: dict[str, str] = {}
 
 _CACHE_DIR = os.environ.get("DART_CACHE_DIR", ".dart_cache")
+_cache_enabled = False
+
+
+def enable_cache() -> None:
+    global _cache_enabled
+    _cache_enabled = True
+    logger.info("DART response cache enabled (dir: %s)", _CACHE_DIR)
 
 
 class DartApiError(Exception):
@@ -183,10 +190,11 @@ def get_single_acnt(
     report_type: 11011=annual, 11012=Q1, 11013=H1, 11014=Q3
     fs_div: CFS=consolidated, OFS=standalone
     """
-    cached = _cache_get(corp_code, year, report_type, fs_div)
-    if cached is not None:
-        logger.debug("DART cache hit: %s %d %s %s", corp_code, year, report_type, fs_div)
-        return cached
+    if _cache_enabled:
+        cached = _cache_get(corp_code, year, report_type, fs_div)
+        if cached is not None:
+            logger.debug("DART cache hit: %s %d %s %s", corp_code, year, report_type, fs_div)
+            return cached
 
     api_key = _get_api_key()
     time.sleep(0.7)
@@ -202,7 +210,8 @@ def get_single_acnt(
             },
         )
         rows = data.get("list", [])
-        _cache_set(corp_code, year, report_type, fs_div, rows)
+        if _cache_enabled:
+            _cache_set(corp_code, year, report_type, fs_div, rows)
         return rows
     except DartApiError as e:
         if fs_div == "CFS":

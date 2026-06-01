@@ -37,6 +37,8 @@ def main() -> int:
 
     fiscal_year = args.year if args.year else get_target_fiscal_year()
     test_limit: int | None = args.test_mode
+    if test_limit:
+        dart_client.enable_cache()
     logger.info(
         "Fiscal year: %d | dry-run: %s | test-mode: %s",
         fiscal_year, args.dry_run, f"top-{test_limit}" if test_limit else "off",

@@ -51,7 +51,8 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Cache DART API responses
+      - name: Cache DART API responses (test mode only)
+        if: ${{ github.event.inputs.test_mode != '' }}
         uses: actions/cache@v4
         with:
           path: .dart_cache
