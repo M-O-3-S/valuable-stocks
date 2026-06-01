@@ -70,4 +70,28 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add docs/data/latest.json
           git diff --staged --quiet || git commit -m "chore: update screener results $(date -u +%Y-%m-%d)"
-          git push
+          git push origin main
+
+      - name: Deploy docs/ to gh-pages branch
+        if: ${{ github.event.inputs.dry_run != 'true' }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Copy docs/ content into a temp folder
+          cp -r docs /tmp/gh-pages-content
+
+          # Switch to gh-pages branch (create if not exists)
+          git fetch origin gh-pages 2>/dev/null || true
+          git checkout gh-pages 2>/dev/null || git checkout --orphan gh-pages
+
+          # Clean working tree and replace with docs/ content
+          git rm -rf . --quiet 2>/dev/null || true
+          cp -r /tmp/gh-pages-content/. .
+
+          git add -A
+          git diff --staged --quiet || git commit -m "deploy: update GitHub Pages $(date -u +%Y-%m-%d)"
+          git push origin gh-pages
+
+          # Return to main
+          git checkout main
