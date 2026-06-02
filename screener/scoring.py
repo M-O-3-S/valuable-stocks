@@ -43,15 +43,39 @@ def compute_value_scores(
         per = _clean(mrow.get("per"))
         psr = _clean(mrow.get("psr"))
 
-        # PCR = price / (operating_cash_flow / shares)
         price = float(mrow.get("price") or 0)
-        shares = float(mrow.get("shares") or 0)
+        market_cap = _clean(mrow.get("market_cap"))
+        shares_raw = mrow.get("shares")
+        shares = float(shares_raw) if shares_raw is not None and shares_raw == shares_raw and shares_raw else 0
+        if not shares and price > 0 and market_cap:
+            shares = market_cap / price
+
+        # Fallback: compute valuation ratios from DART when FDR didn't provide them.
+        # FDR market_cap and DART amounts are both in raw KRW (원).
+        if market_cap and market_cap > 0:
+            if pbr is None:
+                eq = fin.get("total_equity")
+                if eq and eq > 0:
+                    pbr = market_cap / eq
+            if per is None:
+                ni = fin.get("net_income")
+                if ni and ni > 0:
+                    per = market_cap / ni
+            if psr is None:
+                rev = fin.get("revenue")
+                if rev and rev > 0:
+                    psr = market_cap / rev
+
+        # PCR = market_cap / operating_cash_flow (same as price / (ocf_per_share))
         op_cf = fin.get("operating_cash_flow")
         pcr = None
-        if op_cf and op_cf > 0 and price > 0 and shares > 0:
-            cf_ps = op_cf / shares
-            if cf_ps > 0:
-                pcr = price / cf_ps
+        if op_cf and op_cf > 0:
+            if market_cap and market_cap > 0:
+                pcr = market_cap / op_cf
+            elif price > 0 and shares > 0:
+                cf_ps = op_cf / shares
+                if cf_ps > 0:
+                    pcr = price / cf_ps
 
         # Zero or negative PER/PBR → unreliable
         if per is not None and per <= 0:
